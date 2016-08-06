@@ -16,9 +16,6 @@ import (
 // MenuItem is used to keep track each menu item of systray
 // Don't create it directly, use the one systray.AddMenuItem() returned
 type MenuItem struct {
-	// ClickedCh is the channel which will be notified when the menu item is clicked
-	ClickedCh chan interface{}
-
 	// id uniquely identify a menu item, not supposed to be modified
 	id int32
 	// title is the text shown on menu item
@@ -29,13 +26,15 @@ type MenuItem struct {
 	disabled bool
 	// checked menu item has a tick before the title
 	checked bool
+	// indicates should be removed
+	remove bool
 }
 
 var (
 	log = golog.LoggerFor("systray")
 
+	ClickedCh     = make(chan *MenuItem)
 	readyCh       = make(chan interface{})
-	clickedCh     = make(chan interface{})
 	menuItems     = make(map[int32]*MenuItem)
 	menuItemsLock sync.RWMutex
 
@@ -67,8 +66,7 @@ func Quit() {
 // It can be safely invoked from different goroutines.
 func AddMenuItem(title string, tooltip string) *MenuItem {
 	id := atomic.AddInt32(&currentID, 1)
-	item := &MenuItem{nil, id, title, tooltip, false, false}
-	item.ClickedCh = make(chan interface{})
+	item := &MenuItem{id, title, tooltip, false, false, false}
 	item.update()
 	return item
 }
@@ -119,6 +117,13 @@ func (item *MenuItem) Uncheck() {
 	item.update()
 }
 
+// Remove a menu item
+//  * Currently implimented on Windows only
+func (item *MenuItem) Remove() {
+	item.remove = true
+	item.update()
+}
+
 // update propogates changes on a menu item to systray
 func (item *MenuItem) update() {
 	menuItemsLock.Lock()
@@ -136,7 +141,7 @@ func systrayMenuItemSelected(id int32) {
 	item := menuItems[id]
 	menuItemsLock.RUnlock()
 	select {
-	case item.ClickedCh <- nil:
+	case ClickedCh <- item:
 	// in case no one waiting for the channel
 	default:
 	}

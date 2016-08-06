@@ -26,7 +26,7 @@ void reportWindowsError(const char* action) {
 			pErrMsg,
 			0,
 			NULL);
-	printf("Systray error %s: %d %s\n", action, errCode, pErrMsg);
+	printf("Systray error %s: %d %S\n", action, errCode, pErrMsg);
 }
 
 void ShowMenu(HWND hWnd) {
@@ -60,6 +60,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 					systray_menu_item_selected(menuId);
 				}
 			}
+			break;
+		case WM_CLOSE:
+			DestroyWindow(hWnd);
 			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
@@ -113,7 +116,6 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow, TCHAR* szWindowClass) {
 
 	return hWnd;
 }
-
 
 BOOL createMenu() {
 	hTrayMenu = CreatePopupMenu();
@@ -174,20 +176,24 @@ void setTooltip(const wchar_t* tooltip) {
 	Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
-void add_or_update_menu_item(int menuId, wchar_t* title, wchar_t* tooltip, short disabled, short checked) {
+void add_or_update_menu_item(int menuId, int menuIdBefore, wchar_t* title, wchar_t* tooltip, short disabled, short checked, short remove, short seperator) {
 	MENUITEMINFO menuItemInfo;
 	menuItemInfo.cbSize = sizeof(MENUITEMINFO);
-	menuItemInfo.fMask = MIIM_FTYPE | MIIM_STRING | MIIM_DATA | MIIM_STATE;
+	menuItemInfo.fMask = MIIM_FTYPE | MIIM_STRING | MIIM_DATA | MIIM_STATE | MIIM_ID;
 	menuItemInfo.fType = MFT_STRING;
 	menuItemInfo.dwTypeData = title;
 	menuItemInfo.cch = wcslen(title) + 1;
 	menuItemInfo.dwItemData = (ULONG_PTR)menuId;
+	menuItemInfo.wID = (unsigned int)menuId;
 	menuItemInfo.fState = 0;
 	if (disabled == 1) {
 		menuItemInfo.fState |= MFS_DISABLED;
 	}
 	if (checked == 1) {
 		menuItemInfo.fState |= MFS_CHECKED;
+	}
+	if (seperator == 1) {
+		menuItemInfo.fType = MFT_SEPARATOR;
 	}
 
 	int itemCount = GetMenuItemCount(hTrayMenu);
@@ -198,15 +204,17 @@ void add_or_update_menu_item(int menuId, wchar_t* title, wchar_t* tooltip, short
 			continue;
 		}
 		if (menuId == id) {
-			SetMenuItemInfo(hTrayMenu, i, TRUE, &menuItemInfo);
+			(0 != remove) ? RemoveMenu(hTrayMenu, i, MF_BYPOSITION) : SetMenuItemInfo(hTrayMenu, i, TRUE, &menuItemInfo);
 			break;
 		}
 	}
-	if (i == itemCount) {
-		InsertMenuItem(hTrayMenu, -1, TRUE, &menuItemInfo);
+	if (0 == remove && i == itemCount) {
+		InsertMenuItem(hTrayMenu, menuIdBefore > 0 ? menuIdBefore : -1, menuIdBefore > 0 ? FALSE : TRUE, &menuItemInfo);
 	}
+	DrawMenuBar(hWnd);
 }
 
 void quit() {
 	Shell_NotifyIcon(NIM_DELETE, &nid);
+	SendMessage(hWnd, WM_CLOSE, NULL, NULL);
 }
