@@ -28,6 +28,8 @@ type MenuItem struct {
 	checked bool
 	// indicates should be removed
 	remove bool
+	// indicates should be a separator
+	separator bool
 }
 
 var (
@@ -64,23 +66,34 @@ func Quit() {
 // that notifies whenever that menu item is clicked.
 //
 // It can be safely invoked from different goroutines.
-func AddMenuItem(title string, tooltip string) *MenuItem {
+func AddMenuItem(title string, tooltip string, before *MenuItem) *MenuItem {
 	id := atomic.AddInt32(&currentID, 1)
-	item := &MenuItem{id, title, tooltip, false, false, false}
-	item.update()
+	item := &MenuItem{id, title, tooltip, false, false, false, false}
+	item.update(before)
 	return item
 }
 
 // SetTitle set the text to display on a menu item
 func (item *MenuItem) SetTitle(title string) {
 	item.title = title
-	item.update()
+	item.update(nil)
+}
+
+// SetTitle set the text to display on a menu item
+func (item *MenuItem) GetTitle() (string) {
+	return item.title
 }
 
 // SetTooltip set the tooltip to show when mouse hover
 func (item *MenuItem) SetTooltip(tooltip string) {
 	item.tooltip = tooltip
-	item.update()
+	item.update(nil)
+}
+
+// SetTooltip set the tooltip to show when mouse hover
+func (item *MenuItem) SetSeparator(s bool) {
+	item.separator = s
+	item.update(nil)
 }
 
 // Disabled checkes if the menu item is disabled
@@ -91,13 +104,13 @@ func (item *MenuItem) Disabled() bool {
 // Enable a menu item regardless if it's previously enabled or not
 func (item *MenuItem) Enable() {
 	item.disabled = false
-	item.update()
+	item.update(nil)
 }
 
 // Disable a menu item regardless if it's previously disabled or not
 func (item *MenuItem) Disable() {
 	item.disabled = true
-	item.update()
+	item.update(nil)
 }
 
 // Checked returns if the menu item has a check mark
@@ -108,28 +121,28 @@ func (item *MenuItem) Checked() bool {
 // Check a menu item regardless if it's previously checked or not
 func (item *MenuItem) Check() {
 	item.checked = true
-	item.update()
+	item.update(nil)
 }
 
 // Uncheck a menu item regardless if it's previously unchecked or not
 func (item *MenuItem) Uncheck() {
 	item.checked = false
-	item.update()
+	item.update(nil)
 }
 
 // Remove a menu item
 //  * Currently implimented on Windows only
 func (item *MenuItem) Remove() {
 	item.remove = true
-	item.update()
+	item.update(nil)
 }
 
 // update propogates changes on a menu item to systray
-func (item *MenuItem) update() {
+func (item *MenuItem) update(before *MenuItem) {
 	menuItemsLock.Lock()
 	defer menuItemsLock.Unlock()
 	menuItems[item.id] = item
-	addOrUpdateMenuItem(item)
+	addOrUpdateMenuItem(item, before)
 }
 
 func systrayReady() {

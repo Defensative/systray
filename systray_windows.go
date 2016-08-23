@@ -100,7 +100,7 @@ func SetTooltip(tooltip string) {
 	_setTooltip.Call(t.Raw())
 }
 
-func addOrUpdateMenuItem(item *MenuItem) {
+func addOrUpdateMenuItem(item *MenuItem, itemBefore *MenuItem) {
 	var disabled = 0
 	if item.disabled {
 		disabled = 1
@@ -108,6 +108,14 @@ func addOrUpdateMenuItem(item *MenuItem) {
 	var checked = 0
 	if item.checked {
 		checked = 1
+	}
+	var remove = 0
+	if item.remove {
+		remove = 1
+	}
+	var separator = 0
+	if item.separator {
+		separator = 1
 	}
 	title, err := strUTF16(item.title)
 	if err != nil {
@@ -119,12 +127,20 @@ func addOrUpdateMenuItem(item *MenuItem) {
 		log.Errorf("Unable to convert tooltip to string pointer: %v", err)
 		return
 	}
+
+	var before int32 = 0
+	if itemBefore != nil {
+		before = itemBefore.id
+	}
 	_add_or_update_menu_item.Call(
 		uintptr(item.id),
+		uintptr(before),
 		title.Raw(),
 		tooltip.Raw(),
 		uintptr(disabled),
 		uintptr(checked),
+		uintptr(remove),
+		uintptr(separator),
 	)
 }
 
