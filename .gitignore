@@ -6,3 +6,4 @@ Release
 Debug
 *.sdf
 dll/systray_unsigned.dll
+.DS_Store

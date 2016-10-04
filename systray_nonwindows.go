@@ -42,7 +42,7 @@ func SetTooltip(tooltip string) {
 	C.setTooltip(C.CString(tooltip))
 }
 
-func addOrUpdateMenuItem(item *MenuItem) {
+func addOrUpdateMenuItem(item, itemStub *MenuItem) {
 	var disabled C.short
 	if item.disabled {
 		disabled = 1
@@ -51,10 +51,20 @@ func addOrUpdateMenuItem(item *MenuItem) {
 	if item.checked {
 		checked = 1
 	}
+	var deleted C.short
+	if item.remove {
+		deleted = 1
+	}
+	var separator C.short
+	if item.separator {
+		separator = 1
+	}
 	C.add_or_update_menu_item(
 		C.int(item.id),
 		C.CString(item.title),
 		C.CString(item.tooltip),
+		deleted,
+		separator,
 		disabled,
 		checked,
 	)

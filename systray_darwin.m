@@ -7,6 +7,8 @@
     NSNumber* menuId;
     NSString* title;
     NSString* tooltip;
+    short isSeperator;
+    short deleted;
     short disabled;
     short checked;
 }
@@ -78,29 +80,34 @@
 
 - (void) add_or_update_menu_item:(MenuItem*) item
 {
-  NSMenuItem* menuItem;
-  int existedMenuIndex = [menu indexOfItemWithRepresentedObject: item->menuId];
-  if (existedMenuIndex == -1) {
-    menuItem = [menu addItemWithTitle:item->title action:@selector(menuHandler:) keyEquivalent:@""];
-    [menuItem setTarget:self];
-    [menuItem setRepresentedObject: item->menuId];
-
-  }
-  else {
-    menuItem = [menu itemAtIndex: existedMenuIndex];
-    [menuItem setTitle:item->title];
-  }
-  [menuItem setToolTip:item->tooltip];
-  if (item->disabled == 1) {
-    [menuItem setEnabled:FALSE];
-  } else {
-    [menuItem setEnabled:TRUE];
-  }
-  if (item->checked == 1) {
-    [menuItem setState:NSOnState];
-  } else {
-    [menuItem setState:NSOffState];
-  }
+    NSMenuItem* menuItem;
+    int existedMenuIndex = [menu indexOfItemWithRepresentedObject: item->menuId];
+    if (existedMenuIndex == -1) {
+      menuItem = [menu addItemWithTitle:item->title action:@selector(menuHandler:) keyEquivalent:@""];
+      [menuItem setTarget:self];
+      [menuItem setRepresentedObject: item->menuId];
+    } else {
+      menuItem = [menu itemAtIndex: existedMenuIndex];
+      [menuItem setTitle:item->title];
+    }
+    [menuItem setToolTip:item->tooltip];
+    if (item->disabled == 1) {
+      [menuItem setEnabled:FALSE];
+    } else {
+      [menuItem setEnabled:TRUE];
+    }
+    if (item->checked == 1) {
+      [menuItem setState:NSOnState];
+    } else {
+      [menuItem setState:NSOffState];
+    }
+    if (item->isSeperator) {
+        [menu removeItem: menuItem];
+        [menu addItem:[NSMenuItem separatorItem]];
+    }
+    if (item->deleted == 1) {
+      [menu removeItem: menuItem];
+    }
 }
 
 - (void) quit
@@ -144,8 +151,11 @@ void setTooltip(char* ctooltip) {
   runInMainThread(@selector(setTooltip:), (id)tooltip);
 }
 
-void add_or_update_menu_item(int menuId, char* title, char* tooltip, short disabled, short checked) {
-  MenuItem* item = [[MenuItem alloc] initWithId: menuId withTitle: title withTooltip: tooltip withDisabled: disabled withChecked: checked];
+void add_or_update_menu_item(int menuId, char* title, char* tooltip, short deleted, short separator, short disabled, short checked) {
+  MenuItem* item = nil;
+  item = [[MenuItem alloc] initWithId: menuId withTitle: title withTooltip: tooltip withDisabled: disabled withChecked: checked];
+  item->isSeperator = separator;
+  item->deleted = deleted;
   free(title);
   free(tooltip);
   runInMainThread(@selector(add_or_update_menu_item:), (id)item);
