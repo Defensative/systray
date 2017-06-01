@@ -22,6 +22,8 @@ typedef struct {
 	char* tooltip;
 	short disabled;
 	short checked;
+	short deleted;
+	short separator;
 } MenuItemInfo;
 
 int nativeLoop(void) {
@@ -81,6 +83,7 @@ gboolean do_add_or_update_menu_item(gpointer data) {
 	// menu id doesn't exist, add new item
 	if(it == NULL) {
 		GtkWidget *menu_item = gtk_menu_item_new_with_label(mii->title);
+
 		int *id = malloc(sizeof(int));
 		*id = mii->menu_id;
 		g_signal_connect_swapped(G_OBJECT(menu_item), "activate", G_CALLBACK(_systray_menu_item_selected), id);
@@ -99,6 +102,15 @@ gboolean do_add_or_update_menu_item(gpointer data) {
 		it = new_node;
 	}
 	GtkWidget * menu_item = GTK_WIDGET(((MenuItemNode*)(it->data))->menu_item);
+
+	if (mii->separator == 1) {
+		gtk_widget_destroy(menu_item);
+		menu_item = gtk_separator_menu_item_new();
+		gtk_menu_shell_append(GTK_MENU_SHELL(global_tray_menu), menu_item);
+	}
+	if (mii->deleted == 1) {
+		gtk_widget_destroy(menu_item);
+	}
 	gtk_widget_set_sensitive(menu_item, mii->disabled == 1 ? FALSE : TRUE);
 	gtk_widget_show_all(global_tray_menu);
 
@@ -140,13 +152,15 @@ void setTooltip(char* ctooltip) {
 	free(ctooltip);
 }
 
-void add_or_update_menu_item(int menu_id, char* title, char* tooltip, short disabled, short checked) {
+void add_or_update_menu_item(int menu_id, char* title, char* tooltip, short deleted, short separator, short disabled, short checked) {
 	MenuItemInfo *mii = malloc(sizeof(MenuItemInfo));
 	mii->menu_id = menu_id;
 	mii->title = title;
 	mii->tooltip = tooltip;
 	mii->disabled = disabled;
 	mii->checked = checked;
+	mii->deleted = deleted;
+	mii->separator = separator;
 	g_idle_add(do_add_or_update_menu_item, mii);
 }
 
